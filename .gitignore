@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# bundled portable node runtime (auto-downloaded by start.bat)
+runtime/
+
+# runtime data (lives in ~/.near-miss, but keep the project clean)
+uploads/
+*.log
+
+# OS junk
+Thumbs.db
+.DS_Store
+
+# editor
+.vscode/
+.idea/

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Near Miss · 擦肩而过</title>
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="stylesheet" href="/css/app.css?v=4" />
+  <!-- Leaflet for the interactive map (AMap/Gaode tiles for China accessibility, loaded from CDN at runtime only) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+</head>
+<body>
+  <header class="appbar">
+    <div class="brand">
+      <div>
+        <h1>Near Miss</h1>
+        <p class="tagline">擦肩而过 · 发现你与重大公共危险事件的时空交集</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="query">时空查询</button>
+      <button class="tab" data-tab="results">结果 <span id="resultBadge" class="badge" hidden>0</span></button>
+      <button class="tab" data-tab="settings">设置</button>
+    </nav>
+  </header>
+
+  <main class="content">
+
+    <!-- ============ TAB: QUERY ============ -->
+    <section class="panel active" id="tab-query">
+      <div class="grid-2">
+        <div class="card">
+          <h2>查询条件</h2>
+
+          <label class="field">
+            <span>地名搜索</span>
+            <div class="row">
+              <input id="placeInput" type="text" placeholder="例如：广州市越秀区" />
+              <button id="placeSearchBtn" class="btn primary">定位</button>
+            </div>
+            <small class="hint">或直接在右侧地图上点击选取位置。</small>
+          </label>
+
+          <label class="field">
+            <span>查询坐标</span>
+            <input id="coordInput" type="text" placeholder="点击地图或搜索地名后自动填入" readonly />
+          </label>
+
+          <div class="field">
+            <span>开始日期</span>
+            <div id="wheelFrom" class="wheel"></div>
+          </div>
+          <div class="field">
+            <span>结束日期</span>
+            <div id="wheelTo" class="wheel"></div>
+          </div>
+          <small class="hint">上下滑动滚轮选择年 / 月 / 日。</small>
+
+          <div class="field">
+            <span>检索词增强（自动）</span>
+            <div id="scopeBox" class="scope-box muted">尚未选取位置。</div>
+          </div>
+
+          <button id="searchBtn" class="btn primary big" disabled>开始查询擦肩而过</button>
+          <p id="queryStatus" class="status"></p>
+        </div>
+
+        <div class="card map-card">
+          <div id="map" class="map"></div>
+          <div class="legend">
+            <span><i style="background:#e63946"></i>擦肩而过</span>
+            <span><i style="background:#f4a261"></i>一衣带水</span>
+            <span><i style="background:#457b9d"></i>一箭之遥</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TAB: RESULTS ============ -->
+    <section class="panel" id="tab-results">
+      <div id="resultsEmpty" class="empty">
+        <div class="empty-icon">⊙</div>
+        <p>还没有查询结果。</p>
+        <small>前往「时空查询」开始。</small>
+      </div>
+
+      <div id="resultsContainer" hidden>
+        <div class="results-header">
+          <div>
+            <h2 id="resultsTitle">擦肩而过</h2>
+            <p id="resultsMeta" class="muted"></p>
+            <p id="resultsNotes" class="notes"></p>
+          </div>
+          <div class="results-mini-map">
+            <div id="miniMap"></div>
+          </div>
+        </div>
+
+        <div id="layerCore" class="layer-group" data-layer="core">
+          <div class="layer-head core">
+            <span class="dot"></span>
+            <div><h3>擦肩而过</h3><p>我与危险擦肩而过。</p></div>
+            <span class="count">0</span>
+          </div>
+          <div class="layer-body"></div>
+        </div>
+        <div id="layerCompanion" class="layer-group" data-layer="companion">
+          <div class="layer-head companion">
+            <span class="dot"></span>
+            <div><h3>一衣带水</h3><p>危险曾离我的生活圈很近。</p></div>
+            <span class="count">0</span>
+          </div>
+          <div class="layer-body"></div>
+        </div>
+        <div id="layerEmpathy" class="layer-group" data-layer="empathy">
+          <div class="layer-head empathy">
+            <span class="dot"></span>
+            <div><h3>一箭之遥</h3><p>我们共同经历过这场灾难。</p></div>
+            <span class="count">0</span>
+          </div>
+          <div class="layer-body"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TAB: SETTINGS ============ -->
+    <section class="panel" id="tab-settings">
+      <div class="card">
+        <h2>设置</h2>
+
+        <div class="field">
+          <span>大模型 API 密钥 <span class="req">（必填，用于联网检索）</span></span>
+          <div class="row">
+            <input id="apiKeyInput" type="password" placeholder="sk-..." />
+            <button id="toggleKey" class="btn ghost" type="button">显示</button>
+            <button id="verifyApiBtn" class="btn primary ghost" type="button">✓ 验证</button>
+          </div>
+          <small id="apiKeyStatus" class="hint">状态：未配置。保存后密钥会被加密存储，输入框将清空——这是正常的安全行为，不影响使用。</small>
+          <span id="verifyApiResult" class="status"></span>
+        </div>
+
+        <div class="field">
+          <span>API Base URL <span class="req">（必填）</span></span>
+          <input id="apiBaseUrlInput" type="text" placeholder="https://api.openai.com/v1" />
+          <small class="hint">OpenAI：<code>https://api.openai.com/v1</code> — 模型 <code>gpt-4o-mini</code>（推荐，联网搜索最佳）</small>
+        </div>
+
+        <div class="field">
+          <span>模型</span>
+          <input id="modelInput" type="text" placeholder="gpt-4o-mini" />
+        </div>
+
+        <div class="grid-2 small">
+          <label class="field">
+            <span>最大事件数</span>
+            <input id="maxEventsInput" type="number" min="1" max="100" />
+          </label>
+          <label class="field">
+            <span>请求超时（秒）</span>
+            <input id="timeoutInput" type="number" min="30" max="300" />
+          </label>
+          <label class="field">
+            <span>结果缓存天数</span>
+            <input id="cacheTtlInput" type="number" min="1" max="365" />
+          </label>
+        </div>
+
+        <hr />
+
+        <div class="field">
+          <label class="check">
+            <input id="offlineToggle" type="checkbox" />
+            <span>启用离线模式（EM-DAT 历史数据库）</span>
+          </label>
+          <small class="hint">离线模式下使用本地导入的权威全球灾害数据库，无需 API，结果更严谨。需先导入 CSV。</small>
+        </div>
+
+        <div class="field" id="offlineBox">
+          <span>离线数据库</span>
+          <div class="row">
+            <input id="offlinePathInput" type="text" readonly placeholder="未导入" />
+            <button id="importDbBtn" class="btn ghost">导入 CSV…</button>
+            <button id="testDbBtn" class="btn ghost">测试</button>
+            <input id="dbFileInput" type="file" accept=".csv,text/csv" hidden />
+          </div>
+          <small id="offlineHint" class="hint">请前往 <a href="https://www.emdat.be/" target="_blank" rel="noopener">emdat.be</a> 下载 EM-DAT 公开存档（CSV）后导入。</small>
+        </div>
+
+        <div class="field">
+          <span>联网检索缓存</span>
+          <div class="row">
+            <input id="cacheStatsInput" type="text" readonly placeholder="未知" />
+            <button id="clearCacheBtn" class="btn ghost">清除缓存</button>
+          </div>
+          <small class="hint">相同地点和时间的查询会直接复用上次结果（更快、结果一致）。缓存保存在本机数据目录，超过缓存天数后自动失效。</small>
+        </div>
+
+        <div class="actions">
+          <button id="saveSettingsBtn" class="btn primary">保存设置</button>
+          <button id="resetSettingsBtn" class="btn ghost">重置设置</button>
+          <span id="settingsStatus" class="status"></span>
+        </div>
+      </div>
+
+      <div class="card privacy">
+        <h3>🔒 隐私与安全</h3>
+        <ul>
+          <li>所有位置数据仅在本机处理，绝不上传至任何中间服务器。</li>
+          <li>API 密钥使用 AES-256-GCM 加密后存储在本地，并绑定到当前机器账户。</li>
+          <li>仅在你执行查询时，才会向<strong>你自行配置</strong>的大模型 API 发送匿名化的时间+地点提示词。</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Leaflet + marker cluster from CDN -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="/js/app.js?v=7"></script>
+</body>
+</html>

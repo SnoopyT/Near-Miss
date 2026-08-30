@@ -1,0 +1,28 @@
+{
+  "name": "near-miss",
+  "version": "1.0.0",
+  "description": "Near Miss (擦肩而过) — 发现你的时空轨迹与重大公共危险事件的潜在交集。隐私优先的本地桌面应用。",
+  "main": "src/server.js",
+  "bin": {
+    "near-miss": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "keywords": [
+    "near-miss",
+    "disaster",
+    "timeline",
+    "exif",
+    "local",
+    "privacy"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "open": "^10.1.0"
+  }
+}
