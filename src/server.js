@@ -12,20 +12,23 @@ const express = require('express');
 const multer = require('multer');
 const { exec } = require('child_process');
 
-// `open` is an ESM-only package in v10+. Under Node CommonJS require() we get
-// the module namespace object; resolve the actual function (default export),
-// with a native child_process fallback so we never crash the server over a
-// "launch browser" nicety.
-const openPkg = require('open');
-const openBrowser = typeof openPkg === 'function'
-  ? openPkg
-  : (openPkg && (openPkg.default || openPkg.open)) || function (url) {
-      // Windows: cmd start; others: platform openers
-      const cmd = process.platform === 'win32' ? `start "" "${url}"`
-        : process.platform === 'darwin' ? `open "${url}"`
-        : `xdg-open "${url}"`;
-      return new Promise((resolve) => exec(cmd, () => resolve()));
-    };
+// `open` is an ESM-only package in v10+. On Node < 22, require() of an ES
+// module throws — fall back to the native OS opener so a missing browser
+// opener can never crash the server.
+let openBrowser;
+try {
+  const openPkg = require('open');
+  openBrowser = typeof openPkg === 'function'
+    ? openPkg
+    : (openPkg && (openPkg.default || openPkg.open));
+} catch (_e) {
+  openBrowser = function (url) {
+    const cmd = process.platform === 'win32' ? `start "" "${url}"`
+      : process.platform === 'darwin' ? `open "${url}"`
+      : `xdg-open "${url}"`;
+    return new Promise((resolve) => exec(cmd, () => resolve()));
+  };
+}
 
 const {
   loadSettings, saveSettings, getApiKey, setApiKey, defaultSettings,
